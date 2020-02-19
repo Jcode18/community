@@ -1,10 +1,12 @@
 package jcode18.community.controller;
 
+import jcode18.community.cache.TagCache;
 import jcode18.community.dto.QuestionDTO;
 import jcode18.community.mapper.QuestionMapper;
 import jcode18.community.model.Question;
 import jcode18.community.model.User;
 import jcode18.community.service.QuestionService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,18 +24,20 @@ public class PublishController {
     private QuestionService questionService;
 
     @GetMapping("/publish/{id}")
-    public String edit(@PathVariable("id") Integer id,
+    public String edit(@PathVariable("id") Long id,
                        Model model){
         QuestionDTO question=questionService.getById(id);
         model.addAttribute("title",question.getTitle());
         model.addAttribute("description",question.getDescription());
         model.addAttribute("tag",question.getTag());
         model.addAttribute("id",question.getId());
+        model.addAttribute("tags", TagCache.get());
         return "publish";
     }
 
     @GetMapping("/publish")
-    public String publish(){
+    public String publish(Model model){
+        model.addAttribute("tags", TagCache.get());
         return "publish";
     }
 
@@ -42,7 +46,7 @@ public class PublishController {
             @RequestParam(value = "title",required = false) String title,
             @RequestParam(value="description",required = false) String description,
             @RequestParam(value = "tag",required = false) String tag,
-            @RequestParam(value = "id",required = false) Integer id,
+            @RequestParam(value = "id",required = false) Long id,
             HttpServletRequest request,
             Model model
     ){
@@ -51,9 +55,16 @@ public class PublishController {
             model.addAttribute("msg","用户未登录");
             return "publish";
         }
+        model.addAttribute("tags", TagCache.get());
         model.addAttribute("title",title);
         model.addAttribute("description",description);
         model.addAttribute("tag",tag);
+        String invalid=TagCache.filterInvalid(tag);
+        if(StringUtils.isNotBlank(invalid)){
+            model.addAttribute("msg","输入非法标签"+invalid);
+            return "publish";
+        }
+
         if(title==null||title==""){
             model.addAttribute("msg","标题不能为空");
             return "publish";
